@@ -1,0 +1,993 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+			"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="pj.spring.mapper.userMapper">
+	<!-- 회원가입 -->
+	<insert id="userInsert" parameterType="userVO">
+		INSERT INTO user(
+			user_id 
+			, user_password
+			, user_name
+			, user_phone
+			, user_email
+			, user_create_id
+			, user_update_id
+		)VALUES(
+			#{user_id}
+			, #{user_password}
+			, #{user_name}
+			, #{user_phone}
+			, #{user_email}
+			, #{user_id}
+			, #{user_id}
+		)
+	</insert>
+	
+	<!-- 회원탈퇴-->
+	<update id="deleteAccount" parameterType="String">
+		UPDATE 
+			user
+		SET 
+			user_status = 'D'
+		WHERE 
+			user_id = #{user_id}
+	</update>
+	
+	<!-- 회원 로그인 -->
+	<select id="selectOneById" parameterType="String" resultType="userVO">
+		SELECT user_id 
+			, user_password
+			, user_type
+			, user_status
+		 FROM user
+		WHERE user_id = #{user_id}
+		AND user_status = 'E'
+	</select>
+	
+	<!-- 비회원 로그인 -->
+	<select id="selectGuestLogin" parameterType="guestVO" resultType="guestVO">
+		SELECT 
+			g.guest_no, guest_phone, guest_name, ordered_no 
+		FROM 
+			guest g, ordered o 
+		WHERE 
+			g.guest_no = o.guest_no
+		AND 
+			guest_name = #{guest_name}
+		AND 
+			guest_password = #{guest_password}
+		AND
+			ordered_no = #{ordered_no}
+	</select>
+	 
+	<!-- 아이디 중복 체크 -->
+	<select id="selectCntByUid" parameterType="String" resultType="int">
+		SELECT COUNT(*) AS cnt 
+			FROM user 
+		WHERE user_id = #{user_id}
+	</select>
+
+	<!-- 주소록 조회 -->
+	<select id="addrlistSelect" parameterType="String" resultType="addressbookVO" >
+		SELECT 
+			address_book_no
+			, address_book_addressname
+			, address_book_name
+			, address_book_postcode
+			, address_book_address
+			, address_book_detailaddress
+			, address_book_phone
+			, address_book_top
+		FROM 
+			address_book
+		WHERE
+			user_id = #{user_id}
+		ORDER BY 
+			address_book_top DESC, 
+			address_book_create_at DESC
+	</select>
+	
+	<!-- 주소록 등록 -->
+	<insert id="addrInsert" parameterType="addressbookVO">
+		INSERT INTO address_book(
+			address_book_addressname 
+			, address_book_name
+			, address_book_postcode
+			, address_book_address
+			, address_book_detailaddress
+			, address_book_phone
+			, address_book_create_id
+			, address_book_update_id
+			, user_id
+			, address_book_top
+		)VALUES(
+			#{address_book_addressname}
+			, #{address_book_name}
+			, #{address_book_postcode}
+			, #{address_book_address}
+			, #{address_book_detailaddress}
+			, #{address_book_phone}
+			, #{user_id}
+			, #{user_id}
+			, #{user_id}
+			, #{address_book_top}
+		);
+	</insert>
+	
+	<!-- 주소록 삭제 -->
+	<delete id="addrDelete" parameterType="String">
+		DELETE FROM address_book WHERE address_book_no =  #{address_book_no}
+	</delete>
+	
+	<!-- 주소록 수정 -->
+	<select id="addrModify" parameterType="String" resultType="addressbookVO" >
+		SELECT address_book_no
+			, address_book_addressname
+			, address_book_name
+			, address_book_postcode
+			, address_book_address
+			, address_book_detailaddress
+			, address_book_phone
+			, address_book_top
+		 FROM address_book
+		WHERE address_book_no =  #{address_book_no}
+	</select>
+	
+	<!-- 기본 주소록 업데이트 -->
+	<update id="updateAddrTop" parameterType="String">
+		UPDATE 
+			address_book
+		SET 
+			address_book_top = 'N'
+		WHERE 
+			user_id = #{user_id}
+		AND 
+			address_book_top = 'Y' 
+	</update>
+	
+	<!-- 주소록 업데이트 -->
+	<update id="addrModifyOk" parameterType="addressbookVO">
+		UPDATE address_book 
+			SET 
+		address_book_addressname     = #{address_book_addressname}
+		, address_book_name          = #{address_book_name} 
+		, address_book_postcode      = #{address_book_postcode} 
+		, address_book_address       = #{address_book_address} 
+		, address_book_detailaddress = #{address_book_detailaddress} 
+		, address_book_phone         = #{address_book_phone} 
+		, address_book_top           = #{address_book_top}
+		WHERE address_book_no =  #{address_book_no}
+	</update>
+	
+	<!-- 회원정보 조회 -->
+ 	<select id="memberinfoSelect" parameterType="String" resultType="userVO" >
+		SELECT user_id 
+			, user_name
+			, user_phone
+			, user_email
+			, user_password
+		 FROM user 
+		WHERE user_id = #{user_id}
+		AND user_status = 'E'
+	</select> 
+	
+	<!-- 회원정보 업데이트 -->
+	<update id="memberinfoModify" parameterType="userVO">
+		UPDATE
+			user
+		SET 
+			user_password = #{user_password}
+			, user_phone  = #{user_phone} 
+			, user_email  = #{user_email} 
+			, user_name   = #{user_name} 
+		WHERE 
+			user_id = #{user_id}
+		AND 
+			user_status = 'E'
+	</update>
+	
+	<!-- 문의하기 등록 -->
+    <!-- 문의하기 -->
+    <insert id="insertContact" parameterType="contactVO">
+        INSERT INTO contact (
+            contact_type,
+            contact_content,
+            contact_password,
+            contact_create_id,
+            contact_update_id,
+            user_id,
+            product_no
+        ) VALUES (
+            #{contact_type},
+            #{contact_content},
+            #{contact_password},
+            #{user_id},
+            #{user_id},
+            #{user_id},
+            #{product_no}
+        )
+		<selectKey order="AFTER" resultType="String" keyProperty="contact_no">
+			SELECT MAX(contact_no) AS contact_no FROM contact
+		</selectKey>
+    </insert>
+
+    <!-- 문의하기 첨부파일 -->
+    <insert id="insertAttachment" parameterType="contactVO">
+        INSERT INTO attachment (
+            attachment_type,
+            attachment_contact_no
+        ) VALUES (
+            'C',
+            #{contact_no}
+        )
+		<selectKey order="AFTER" resultType="String" keyProperty="attachment_no">
+			SELECT MAX(attachment_no) AS attachment_no FROM attachment
+		</selectKey>
+    </insert>
+
+    <!-- 문의하기 첨부파일 상세 -->
+    <insert id="insertAttachmentDetail" parameterType="contactVO">
+        INSERT INTO attachment_detail (
+            attachment_detail_name,
+            attachment_detail_new_name,
+            attachment_detail_path,
+            attachment_detail_create_id,
+            attachment_detail_update_id,
+            attachment_no
+        ) VALUES (
+            #{attachment_detail_name},
+            #{attachment_detail_new_name},
+            #{attachment_detail_path},
+            #{user_id},
+            #{user_id},
+            #{attachment_no}  <!-- insertAttachment로 반환된 attachment_no 사용 -->
+        )
+    </insert>
+    
+	<!-- 문의하기 목록 -->
+	<select id="selectContactList" parameterType="String" resultType="contactVO" >
+		SELECT
+			ROW_NUMBER() OVER (ORDER BY c.contact_no) AS contact_seq,
+		    c.contact_no,
+		    contact_type,
+		    contact_content,
+		    contact_password,
+		    contact_comment,
+		    DATE_FORMAT(contact_create_at, '%Y.%m.%d') AS contact_create_at,
+		    u.user_id,
+		    u.user_name,
+		    c.product_no
+		FROM contact c
+		LEFT JOIN user u ON u.user_id = c.user_id
+		LEFT JOIN product p ON c.product_no = p.product_no
+		WHERE (c.product_no = p.product_no OR c.product_no IS NULL)
+		AND u.user_id = #{user_id}
+		ORDER BY contact_no DESC
+	</select>
+
+	<!-- 문의하기 상세 -->
+	<select id="selectContact" parameterType="String" resultType="contactVO" >
+		SELECT DISTINCT
+			a.attachment_no,
+			c.contact_no,
+			contact_type,
+			contact_content,
+			contact_password,
+			contact_create_at,
+			contact_comment,
+			u.user_id,
+			u.user_name,
+			c.product_no,
+			attachment_detail_new_name
+		FROM contact c
+			LEFT JOIN attachment a ON c.contact_no = a.attachment_contact_no
+			LEFT JOIN attachment_detail ad ON a.attachment_no = ad.attachment_no
+			LEFT JOIN user u ON u.user_id = c.user_id
+			LEFT JOIN product p ON c.product_no = p.product_no
+		WHERE (c.product_no = p.product_no OR c.product_no IS NULL)
+		AND c.contact_no = #{contact_no}
+	</select>
+
+	<!-- 문의하기 상세 -->
+	<select id="selectContactAttachment" parameterType="String" resultType="contactVO" >
+        SELECT
+        	a.attachment_no, 
+			attachment_detail_new_name
+		FROM contact c
+		LEFT JOIN attachment a ON c.contact_no = a.attachment_contact_no
+		LEFT JOIN attachment_detail ad ON a.attachment_no = ad.attachment_no
+		WHERE c.contact_no = #{contact_no}
+	</select>
+	
+	<!-- 문의하기 수정 -->
+	<select id="updateContact" parameterType="String" resultType="contactVO" >
+		SELECT
+			c.contact_no,
+			contact_type,
+			contact_content,
+			contact_password,
+			u.user_name,
+			c.product_no,
+			GROUP_CONCAT(ad.attachment_detail_name SEPARATOR ', ') AS attachment_detail_name
+		FROM contact c
+			LEFT JOIN attachment a ON c.contact_no = a.attachment_contact_no
+			LEFT JOIN attachment_detail ad ON a.attachment_no = ad.attachment_no
+			LEFT JOIN user u ON u.user_id = c.user_id
+			LEFT JOIN product p ON c.product_no = p.product_no
+		WHERE (c.product_no = p.product_no OR c.product_no IS NULL)
+		AND c.contact_no = #{contact_no}
+	</select>
+	
+	<!-- 문의하기 업데이트 -->
+	<update id="updateOkContact" parameterType="contactVO">
+		UPDATE contact 
+			SET 
+		contact_type      = #{contact_type}
+		, contact_content = #{contact_content} 
+		, contact_update_id = #{user_id} 
+		WHERE contact_no =  #{contact_no}
+	</update>
+	
+    <!-- 문의하기 첨부파일 업데이트 -->
+    <select id="selectAttachment" parameterType="String" resultType="contactVO" >
+		SELECT attachment_no 
+			FROM libro.attachment 
+		WHERE attachment_contact_no = #{attachment_contact_no};
+    </select>
+
+    <!-- 문의하기 첨부파일 삭제 -->
+   	<delete id="deleteAttachment" parameterType="String">
+		DELETE FROM attachment WHERE attachment_no =  #{attachment_no}
+	</delete>
+
+    <!-- 문의하기 첨부파일 상세 삭제 -->
+   	<delete id="deleteAttachmentDetail" parameterType="String">
+		DELETE FROM attachment_detail WHERE attachment_no =  #{attachment_no}
+	</delete>
+	
+	<!-- 문의하기 삭제 -->
+	<delete id="deleteContact" parameterType="String">
+		DELETE FROM contact WHERE contact_no =  #{contact_no}
+	</delete>
+	
+	<!--주문내역 목록 토탈  -->
+	<select id="selectTotalOrderhistory" parameterType="String" resultType="orderedVO" >
+		SELECT 
+			COUNT(o.ordered_no) AS cnt
+		FROM 
+			ordered o
+		JOIN 
+			user u ON u.user_id = o.user_id
+		WHERE 
+			u.user_id = #{user_id}
+	</select>
+
+	<!--취소내역 목록 토탈  -->
+	<select id="selectTotalOrderhistoryCancel" parameterType="String" resultType="orderedVO" >
+		SELECT 
+			COUNT(DISTINCT o.ordered_no) AS cnt
+		FROM 
+			ordered o
+		JOIN 
+			user u ON u.user_id = o.user_id
+		WHERE 
+			u.user_id = #{user_id}
+		AND
+			o.ordered_status = 'CC'
+	</select>
+	
+	<!-- 주문내역 목록 -->
+	<select id="selectOrderhistory" parameterType="String" resultType="orderedVO">
+		SELECT
+			pm.payment_no,
+			o.ordered_no, 
+			DATE(o.ordered_date) AS ordered_date, 
+			o.ordered_status,
+			p.product_no, 
+			p.product_name,
+			p.product_author,
+			p.product_publisher,
+			ad.attachment_detail_new_name,
+			category_name,
+			ordered_detail_quantity,
+			ordered_detail_unit_price,
+			payment_type
+		FROM 
+			ordered o, ordered_detail od, product p, attachment a, attachment_detail ad, category c, payment pm 
+		WHERE
+			o.payment_no = pm.payment_no
+		AND			
+			o.ordered_no = od.ordered_no
+		AND
+			od.product_no = p.product_no
+		AND
+			c.category_no = p.category_no
+		AND
+			p.product_no = a.attachment_product_no 
+		AND 
+			a.attachment_no = ad.attachment_no
+		AND 
+			a.attachment_type = 'PT'
+		AND
+			o.user_id = #{user_id}
+		ORDER BY 
+			o.ordered_no DESC;
+	</select>
+	
+	<!-- 비회원 주문내역 목록 -->
+	<select id="selectOrderhistoryGuest" parameterType="String" resultType="orderedVO">
+		SELECT
+			pm.payment_no,
+			o.ordered_no, 
+			DATE(o.ordered_date) AS ordered_date, 
+			o.ordered_status,
+			p.product_no, 
+			p.product_name,
+			p.product_author,
+			p.product_publisher,
+			ad.attachment_detail_new_name,
+			category_name,
+			ordered_detail_quantity,
+			ordered_detail_unit_price,
+			payment_type
+		FROM 
+			ordered o, ordered_detail od, product p, attachment a, attachment_detail ad, category c, payment pm 
+		WHERE
+			o.payment_no = pm.payment_no
+		AND			
+			o.ordered_no = od.ordered_no
+		AND
+			od.product_no = p.product_no
+		AND
+			c.category_no = p.category_no
+		AND
+			p.product_no = a.attachment_product_no 
+		AND 
+			a.attachment_no = ad.attachment_no
+		AND 
+			a.attachment_type = 'PT'
+		AND
+			o.guest_no = #{guest_no}
+		ORDER BY 
+			o.ordered_no DESC;
+	</select>
+	
+	<!-- 취소 신청 -->
+	<update id="updateOrderstatus1" parameterType="String">
+		UPDATE ordered SET ordered_status = 'CW' WHERE ordered_no = #{ordered_no}
+	</update>
+
+	<update id="updateOrderstatus2" parameterType="String">
+		UPDATE payment SET payment_type = 'RW' WHERE payment_no = #{payment_no}
+	</update>
+	
+	<!-- 배송지 변경 -->
+	<select id="selectAddr" parameterType="String" resultType="orderedVO">
+		SELECT 		
+			ordered_no,
+			ordered_address_postcode,
+			ordered_address_address,
+			ordered_address_detailaddress,
+			ordered_name, 
+			ordered_phone, 
+			ordered_note
+		FROM 
+			ordered
+		WHERE 
+			ordered_no = #{ordered_no}
+	</select>
+	
+	<update id="updateAddr" parameterType="orderedVO">
+		UPDATE ordered 
+			SET 
+		ordered_name                    = #{ordered_name} 
+		, ordered_address_postcode      = #{ordered_address_postcode} 
+		, ordered_address_address       = #{ordered_address_address} 
+		, ordered_address_detailaddress = #{ordered_address_detailaddress} 
+		, ordered_phone                 = #{ordered_phone} 
+		, ordered_note                  = #{ordered_note}
+		, ordered_address               = CONCAT('[', #{ordered_address_postcode}, ']', ' ', #{ordered_address_address}, ' ', #{ordered_address_detailaddress})
+		WHERE ordered_no =  #{ordered_no}
+	</update>
+
+	<!-- 취소내역 목록 -->
+	<select id="selectOrderhistoryCancel" parameterType="String" resultType="orderedVO" >
+		SELECT
+			pm.payment_no,
+			o.ordered_no, 
+			DATE(o.ordered_date) AS ordered_date, 
+			o.ordered_status,
+			p.product_no, 
+			p.product_name,
+			p.product_author,
+			p.product_publisher,
+			ad.attachment_detail_new_name,
+			category_name,
+			ordered_detail_quantity,
+			ordered_detail_unit_price,
+			payment_type
+		FROM 
+			ordered o, ordered_detail od, product p, attachment a, attachment_detail ad, category c, payment pm  
+		WHERE
+			o.payment_no = pm.payment_no
+		AND	
+			o.ordered_no = od.ordered_no
+		AND
+			od.product_no = p.product_no
+		AND
+			c.category_no = p.category_no
+		AND
+			p.product_no = a.attachment_product_no 
+		AND 
+			a.attachment_no = ad.attachment_no
+		AND 
+			a.attachment_type = 'PT'
+		AND
+			o.user_id = #{user_id}
+		AND
+			( o.ordered_status = 'CW' OR o.ordered_status = 'CC' )
+		ORDER BY 
+			o.ordered_no DESC;
+	</select>
+	
+	<!-- 비회원 취소내역 목록 -->
+	<select id="selectOrderhistoryCancelGuest" parameterType="String" resultType="orderedVO" >
+		SELECT
+			pm.payment_no,
+			o.ordered_no, 
+			DATE(o.ordered_date) AS ordered_date, 
+			o.ordered_status,
+			p.product_no, 
+			p.product_name,
+			p.product_author,
+			p.product_publisher,
+			ad.attachment_detail_new_name,
+			category_name,
+			ordered_detail_quantity,
+			ordered_detail_unit_price,
+			payment_type
+		FROM 
+			ordered o, ordered_detail od, product p, attachment a, attachment_detail ad, category c, payment pm  
+		WHERE
+			o.payment_no = pm.payment_no
+		AND	
+			o.ordered_no = od.ordered_no
+		AND
+			od.product_no = p.product_no
+		AND
+			c.category_no = p.category_no
+		AND
+			p.product_no = a.attachment_product_no 
+		AND 
+			a.attachment_no = ad.attachment_no
+		AND 
+			a.attachment_type = 'PT'
+		AND
+			o.guest_no = #{guest_no}
+		AND
+			( o.ordered_status = 'CW' OR o.ordered_status = 'CC' )
+		ORDER BY 
+			o.ordered_no DESC;
+	</select>
+	
+	<!-- 주문내역 상세 -->
+	<select id="selectOrderhistorydetail" parameterType="String" resultType="orderedVO" >
+		SELECT DISTINCT
+			o.ordered_no, 
+			DATE(o.ordered_date) AS ordered_date, 
+			o.ordered_status,
+		    o.ordered_name,
+			o.ordered_address,
+			o.ordered_phone,
+			o.ordered_note,
+		    od.ordered_detail_total_price,
+			pm.payment_method,
+			payment_type
+		FROM 
+			ordered o, ordered_detail od, payment pm 
+		WHERE
+			o.ordered_no = od.ordered_no
+		AND
+			pm.payment_no = o.payment_no
+		AND
+			pm.payment_price = od.ordered_detail_total_price    
+		AND
+			o.ordered_no = #{ordered_no}
+		ORDER BY 
+			o.ordered_no DESC
+	</select>
+
+	<!-- 주문내역 상세(상품) -->
+	<select id="selectOrderhistorydetailp" parameterType="String" resultType="orderedVO" >
+		SELECT
+			p.product_no, 
+			p.product_name,
+			p.product_author,
+			p.product_publisher,
+			ad.attachment_detail_new_name,
+			category_name,
+			ordered_detail_quantity,
+			ordered_detail_unit_price
+		FROM 
+			ordered o, ordered_detail od, product p, attachment a, attachment_detail ad, category c
+		WHERE
+			o.ordered_no = od.ordered_no
+		AND
+			od.product_no = p.product_no
+		AND
+			c.category_no = p.category_no
+		AND
+			p.product_no = a.attachment_product_no 
+		AND 
+			a.attachment_no = ad.attachment_no
+		AND 
+			a.attachment_type = 'PT'
+		AND
+			o.ordered_no = #{ordered_no}
+		ORDER BY 
+			od.ordered_detail_no
+	</select>
+	
+	<!-- 리뷰 가능한 목록 -->
+	<select id="selectReviewPossibleList" parameterType="String" resultType="reviewVO">
+		SELECT DISTINCT
+			od.ordered_detail_no,
+			c.category_name,
+			p.product_name, 
+			p.product_author, 
+			p.product_publisher, 
+			p.product_price,
+			DATE(o.ordered_date) AS ordered_date,
+			p.product_no,
+			attachment_detail_new_name
+		FROM 
+			ordered o
+		JOIN 
+			ordered_detail od ON o.ordered_no = od.ordered_no
+		JOIN 
+			product p ON od.product_no = p.product_no
+		JOIN 
+			category c ON c.category_no = p.category_no
+		JOIN 
+			user u ON u.user_id = o.user_id
+		JOIN 
+			payment pm ON pm.user_id = u.user_id 
+		JOIN 
+			attachment a ON p.product_no = a.attachment_product_no 
+		JOIN 
+			attachment_detail ad ON a.attachment_no = ad.attachment_no 
+		LEFT JOIN 
+			review r ON r.product_no = p.product_no AND r.user_id = o.user_id
+		WHERE 
+			u.user_id = #{user_id}
+		AND 
+			o.ordered_status = 'D' 
+		AND 
+			pm.payment_type = 'PC'
+		AND 
+			a.attachment_type = 'PT'
+		AND
+			r.review_no IS NULL
+		ORDER BY 
+			od.ordered_detail_no;
+	</select>
+
+	<!-- 리뷰 작성한 목록 -->
+	<select id="selectReviewList" parameterType="String" resultType="reviewVO">
+		SELECT 
+			ROW_NUMBER() OVER (ORDER BY od.ordered_detail_no DESC) AS review_seq, -- 순번을 ordered_detail_no 기준으로
+			p.product_name,
+			r.review_starrating, 
+			r.review_content, 
+			DATE_FORMAT(r.review_create_at, '%Y.%m.%d') AS review_create_at,
+			p.product_no,
+			u.user_name
+		FROM 
+			review r
+		JOIN 
+			user u ON r.user_id = u.user_id
+		JOIN 
+			product p ON p.product_no = r.product_no
+		JOIN 
+			ordered_detail od ON p.product_no = od.product_no    
+		JOIN 
+			ordered o ON o.ordered_no = od.ordered_no
+		WHERE 
+			u.user_id = #{user_id}
+		AND 
+			r.review_status = 'E'
+		ORDER BY 
+			od.ordered_detail_no DESC;
+	</select>
+	
+	<!-- 리뷰 등록 전 상품 조회 -->
+	<select id="selectProduct" parameterType="String" resultType="productVO">
+		SELECT 
+			product_no, 
+			product_name, 
+			product_author, 
+			product_price, 
+			product_publisher,
+			attachment_detail_new_name
+		FROM 
+			product p, attachment a, attachment_detail ad
+		WHERE 
+			product_no = #{product_no}
+		AND
+			p.product_no = a.attachment_product_no 
+		AND 
+			a.attachment_no = ad.attachment_no
+		AND 
+			a.attachment_type = 'PT'
+	</select>
+	
+	<!-- 리뷰 등록 -->
+	<insert id="insertReview" parameterType="reviewVO">
+		INSERT INTO review (
+			review_content, 
+			review_starrating, 
+			review_create_id, 
+			review_update_id, 
+			user_id, 
+			product_no
+		) VALUES (
+			#{review_content}, 
+			#{review_starrating}, 
+			#{user_id}, 
+			#{user_id}, 
+			#{user_id}, 
+			#{product_no}
+		)
+	</insert>
+	
+	<!-- 리뷰 수정 전 조회 -->
+	<select id="selectReview" parameterType="String" resultType="reviewVO">
+		SELECT 
+			r.review_no, 
+			r.review_content, 
+			r.review_starrating, 
+			u.user_name
+		FROM 
+			review r, user u
+		WHERE
+			r.user_id = u.user_id
+		AND
+			r.review_no = #{review_no}
+	</select>
+	
+	<!-- 리뷰 수정 -->
+	<update id="updateReview" parameterType="reviewVO">
+		UPDATE review SET  
+			review_content = #{review_content}, 
+			review_starrating = #{review_starrating}, 
+			review_update_id = #{user_id}
+		WHERE
+			review_no = #{review_no};
+	</update>
+
+	<!-- 리뷰 삭제  -->
+	<update id="deleteReview" parameterType="String">
+		UPDATE review SET  
+			review_status = 'D' 
+		WHERE
+			review_no = #{review_no};
+	</update>	
+	
+	<!-- 비회원용 상품정보 -->
+	<select id="selectProductForGuest" parameterType="String" resultType="reviewVO">
+		SELECT DISTINCT
+			p.product_no, 
+			p.product_name,
+			p.product_author,
+			p.product_publisher,
+			p.product_price,
+			p.product_status,
+			p.product_status,
+			ad.attachment_detail_new_name,
+			FORMAT((SELECT AVG(review_starrating) FROM review r WHERE r.product_no = p.product_no), 1) as review_starrating_avg,
+			(SELECT COUNT(review_no) FROM review r WHERE r.product_no = p.product_no) as review_cnt
+		FROM 
+			product p 
+			LEFT JOIN review r ON p.product_no = r.product_no
+			JOIN attachment a ON p.product_no = a.attachment_product_no
+			JOIN attachment_detail ad ON a.attachment_no = ad.attachment_no
+		AND
+			p.product_no = #{product_no}
+		AND 
+			a.attachment_type = 'PT'
+	</select>
+	
+	<!-- 비회원용 장바구니 조회 -->
+ 	<select id="selectCartListGuest" parameterType="String" resultType="ProductVO">
+		SELECT attachment_detail_new_name
+			 , p.product_no
+			 , product_name
+			 , product_author
+			 , product_price
+			 , product_created_at
+			 , category_name
+			 , product_status
+		FROM product p
+		JOIN attachment a
+		ON p.product_no = a.attachment_product_no AND a.attachment_type ='PT'
+		JOIN attachment_detail d
+		ON a.attachment_no = d.attachment_no
+		JOIN category cg
+		ON p.category_no = cg.category_no
+		WHERE
+			p.product_no = #{product_no}
+	</select> 
+	
+	<!-- 카트 중복 조회 -->
+	<select id="selectDedupeCart" parameterType="CartVO" resultType="int">
+		SELECT 
+			COUNT(cart_no) 
+		FROM
+			cart
+		WHERE
+			user_id = #{user_id}
+		AND
+			product_no = #{product_no}
+	</select>
+	
+	<!-- 카트 등록 -->
+	<insert id="insertCart" parameterType="cartVO">
+		INSERT INTO cart (
+			cart_product_quantity,
+			cart_create_id,
+			cart_update_id,
+			user_id,
+			product_no
+		) VALUES (
+			#{cart_product_quantity},
+			#{user_id},
+			#{user_id},
+			#{user_id},
+			#{product_no}
+		);
+	</insert>
+
+	<!-- 카트 등록 -->
+	<insert id="insertCart_" parameterType="cartVO">
+		INSERT INTO cart (
+			cart_product_quantity,
+			cart_create_id,
+			cart_update_id,
+			user_id,
+			product_no
+		) VALUES (
+			1,
+			#{user_id},
+			#{user_id},
+			#{user_id},
+			#{product_no}
+		);
+	</insert>
+	
+	<!-- 위시리스트 조회 -->
+	<select id="selectWishlist" parameterType="String" resultType="wishlistVO">
+		SELECT DISTINCT
+			w.wishlist_no,
+			p.product_no, 
+			p.product_name,
+			p.product_author,
+			p.product_publisher,
+			p.product_status,
+			ad.attachment_detail_new_name,
+			p.product_price,
+			FORMAT((SELECT AVG(review_starrating) FROM review r WHERE r.product_no = p.product_no), 1) as review_starrating_avg,
+			(SELECT COUNT(review_no) FROM review r WHERE r.product_no = p.product_no) as review_cnt
+		FROM 
+			wishlist w
+			JOIN product p ON p.product_no = w.product_no
+			LEFT JOIN review r ON p.product_no = r.product_no
+			JOIN attachment a ON p.product_no = a.attachment_product_no
+			JOIN attachment_detail ad ON a.attachment_no = ad.attachment_no
+		WHERE
+			w.user_id = #{user_id}
+		AND 
+			a.attachment_type = 'PT'
+		ORDER BY
+			wishlist_no DESC
+	</select>	
+	
+	<!-- 위시리스트 중복 조회 -->
+	<select id="selectDedupeWishlist" parameterType="wishlistVO" resultType="int">
+		SELECT 
+			COUNT(wishlist_no)
+		FROM 
+			wishlist
+		WHERE
+			user_id = #{user_id}
+		AND 
+			product_no = #{product_no}
+	</select>	
+	
+	<!-- 위시리스트 등록 -->
+	<insert id="insertWishlist" parameterType="wishlistVO">
+		INSERT INTO wishlist (
+			wishlist_create_id,
+			wishlist_update_id,
+			user_id,
+			product_no
+		) VALUES (
+			#{user_id},
+			#{user_id},
+			#{user_id},
+			#{product_no}
+		);
+	</insert>
+	
+	<!-- 위시리스트 삭제 -->
+	<delete id="deleteWishlist" parameterType="String">
+		DELETE FROM wishlist WHERE wishlist_no = #{wishlist_no} 
+	</delete>
+
+	<!-- 최근본상품 중복 조회 -->
+	<select id="selectDedupeRecentlyproduct" parameterType="recentlyproductVO" resultType="int">
+		SELECT 
+			COUNT(recentlyproduct_no)
+		FROM 
+			recentlyproduct
+		WHERE
+			user_id = #{user_id}
+		AND 
+			product_no = #{product_no}
+	</select>
+
+	<!-- 최근본상품 조회 -->
+	<select id="selectRecentlyproduct" parameterType="String" resultType="recentlyproductVO">			
+		SELECT DISTINCT
+			rp.recentlyproduct_no,
+			p.product_no, 
+			p.product_name,
+			p.product_author,
+			p.product_publisher,
+			p.product_status,
+			ad.attachment_detail_new_name,
+			p.product_price,
+			FORMAT((SELECT AVG(review_starrating) FROM review r WHERE r.product_no = p.product_no), 1) as review_starrating_avg,
+			(SELECT COUNT(review_no) FROM review r WHERE r.product_no = p.product_no) as review_cnt
+		FROM 
+			recentlyproduct rp
+			JOIN product p ON p.product_no = rp.product_no
+			LEFT JOIN review r ON p.product_no = r.product_no
+			JOIN attachment a ON p.product_no = a.attachment_product_no
+			JOIN attachment_detail ad ON a.attachment_no = ad.attachment_no
+		WHERE
+			rp.user_id = #{user_id}
+		AND 
+			a.attachment_type = 'PT'
+		ORDER BY 
+			rp.recentlyproduct_no DESC
+	</select>	
+	
+	<!-- 최근본상품 등록 -->
+	<insert id="insertRecentlyproduct" parameterType="recentlyproductVO">
+		INSERT INTO recentlyproduct (
+			recentlyproduct_create_id,
+			recentlyproduct_update_id,
+			user_id,
+			product_no
+		) VALUES (
+			#{user_id},
+			#{user_id},
+			#{user_id},
+			#{product_no}
+		);
+	</insert>
+	
+	<!-- 최근본상품 삭제 -->
+	<delete id="deleteRecentlyproduct_" parameterType="String">
+		DELETE FROM recentlyproduct WHERE recentlyproduct_no = #{recentlyproduct_no} 
+	</delete>
+	
+	<!-- 최근본상품 삭제 -->
+	<delete id="deleteRecentlyproduct" parameterType="recentlyproductVO">
+		DELETE FROM recentlyproduct WHERE product_no = #{product_no} AND user_id = #{user_id} 
+	</delete>
+	
+</mapper>
+
+
+

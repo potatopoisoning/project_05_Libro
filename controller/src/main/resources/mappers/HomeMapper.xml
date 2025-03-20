@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+			"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="pj.spring.mapper.homeMapper">
+
+   	<!-- index 베스트 셀러 -->
+   	<!-- 가장 많이 팔린  -->
+   	<select id="selectBestSellerBook" resultType="productVO">
+		SELECT attachment_detail_new_name
+			 , p.product_no
+	 		 , product_name
+     		 , product_author
+     		 , COUNT(od.product_no) AS order_count
+  		  FROM product p
+  		  JOIN attachment a
+    		ON p.product_no = a.attachment_product_no AND attachment_type = 'PT'
+  		  JOIN attachment_detail d
+    		ON a.attachment_no = d.attachment_no 
+  		  JOIN ordered_detail od
+    		ON p.product_no = od.product_no
+    	   AND product_status = 'E'
+   	  GROUP BY od.product_no, d.attachment_detail_new_name, p.product_name, p.product_author
+   	  ORDER BY order_count DESC
+   		 LIMIT 4;
+   	</select>
+   	
+   	<!-- 화제의 신작 -->
+   	<!-- 신작 중  판매량이 많은 순 -->
+   	<select id="selectHotBook" resultType="productVO">
+		SELECT attachment_detail_new_name
+			 , p.product_no
+	 		 , product_name
+     		 , product_author
+     		 , COUNT(od.product_no) AS order_count
+  		  FROM product p
+  		  JOIN attachment a
+    		ON p.product_no = a.attachment_product_no AND attachment_type = 'PT'
+  		  JOIN attachment_detail d
+    		ON a.attachment_no = d.attachment_no 
+  		  JOIN ordered_detail od
+    		ON p.product_no = od.product_no
+    	   AND product_status = 'E'
+   	  GROUP BY od.product_no, d.attachment_detail_new_name, p.product_name, p.product_author
+   	  ORDER BY order_count, product_created_at DESC
+   		 LIMIT 4;
+   	</select>
+   	
+   	<!-- index 오늘의 책 -->
+	<select id="selectTodayBook" resultType="productVO">
+		SELECT attachment_detail_new_name
+	 		 , product_name
+     		 , product_author
+  		 FROM product p
+  	LEFT JOIN attachment a
+    	   ON p.product_no = a.attachment_product_no AND attachment_type = 'PT'
+  	LEFT JOIN attachment_detail d
+    	   ON a.attachment_no = d.attachment_no
+   WHERE DATE(p.product_created_at) = DATE(now())
+   		  AND product_status = 'E'
+ 		LIMIT 4;
+   	</select>
+
+   	<!-- paging total 조회 -->
+   	<select id="selectProductTotal" parameterType="searchVO" resultType="int">
+   		SELECT COUNT(*)
+   		  FROM product
+   		  <if test="searchValue != null">
+   		 WHERE product_name LIKE CONCAT('%', #{searchValue}, '%')
+		    OR product_author LIKE CONCAT('%', #{searchValue}, '%');
+		  </if>
+   	</select>
+   	
+   	<!-- index_search -->
+   	<!-- SearchVO에 PagingUtil을 extends 시켜줌 -->
+   	<select id="selectIndexSearch" parameterType="searchVO" resultType="productVO">
+   		 SELECT attachment_detail_new_name
+   		 	  , p.product_no
+	 		  , product_name
+     		  , product_author
+     		  , product_price
+     		  , category_name
+  		  FROM product p
+  		  JOIN attachment a
+		    ON p.product_no = a.attachment_product_no AND a.attachment_type ='PT'
+		  JOIN attachment_detail d
+		    ON a.attachment_no = d.attachment_no
+		  JOIN category c
+		    ON p.category_no = c.category_no
+		    <if test="searchValue != null">
+ 		 WHERE (p.product_name LIKE CONCAT('%', #{searchValue}, '%')
+		    OR p.product_author LIKE CONCAT('%', #{searchValue}, '%'))		    
+		    </if>
+		   AND product_status = 'E'
+   	  ORDER BY product_created_at DESC
+   	  	 LIMIT #{start}, #{perPage};
+   	</select>
+   	
+   	<!-- index_search banner 조회 -->	
+   	<select id="selectRecommend" resultType="productVO">
+   		SELECT attachment_detail_new_name
+   			 , p.product_no
+			 , product_name
+     		 , product_author
+  		  FROM product p
+  		  JOIN attachment a
+    		ON p.product_no = a.attachment_product_no AND a.attachment_type ='PT'
+  		  JOIN attachment_detail d
+    		ON a.attachment_no = d.attachment_no
+    	 WHERE product_status = 'E'
+   	  ORDER BY p.product_created_at
+   		 LIMIT 0, 4;
+   	</select>
+   	
+   	<!-- cart 데이터 조회 -->
+   	<select id="selectCart" resultType="ProductVO">
+   		SELECT attachment_detail_new_name
+	 		 , p.product_no
+	 		 , product_name
+     		 , product_author
+     		 , product_price
+     		 , c.cart_no
+     		 , product_status
+  		  FROM cart c
+  		  JOIN product p
+    		ON c.product_no = p.product_no
+  		  JOIN attachment a
+    		ON p.product_no = a.attachment_product_no AND a.attachment_type ='PT'
+		  JOIN attachment_detail d
+			ON a.attachment_no = d.attachment_no
+ 		   <if test="user_id != null and user_id != ''">
+ 		   WHERE c.user_id = #{user_id};
+ 		   </if>
+ 		   <if test="(user_id == null or user_id == '') and guest_no != null and guest_no != ''">
+ 		   WHERE c.guest_no = #{guest_no};
+ 		   </if>
+   	</select>
+   	
+   	<!-- cart 데이터 삭제 -->
+   	<delete id="deleteCart" parameterType="String">
+   		DELETE FROM cart
+   		 WHERE cart_no = #{cart_no};
+   	</delete>
+</mapper>
+
+
+

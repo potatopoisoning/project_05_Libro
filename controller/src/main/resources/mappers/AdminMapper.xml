@@ -1,0 +1,562 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+			"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="pj.spring.mapper.adminMapper">
+	
+	<!-- 대시보드 주문 관리  건 수 -->
+	<select id="orderCount" resultType="java.util.Map" >
+		SELECT (select count(*) from ordered where ordered_status = 'D' and ordered_date = CURRENT_DATE) AS d_cnt
+      		  ,(select count(*) from ordered where ordered_status = 'O' and ordered_date = CURRENT_DATE) AS o_cnt
+      		  ,(select count(*) from payment where payment_type = 'PC' and payment_date = CURRENT_DATE) AS pc_cnt
+	</select>
+	
+	<!-- 대시보드 취소 관리  건 수  -->
+	<select id="cancelCount" resultType="java.util.Map" >
+		SELECT (select count(*) from ordered where ordered_status = 'CW' and ordered_date = CURRENT_DATE) AS cw_cnt
+      		  ,(select count(*) from ordered where ordered_status = 'CC' and ordered_date = CURRENT_DATE) AS cc_cnt
+      		  ,(select count(*) from payment where payment_type = 'RW' and payment_date = CURRENT_DATE) AS rw_cnt
+      		  ,(select count(*) from payment where payment_type = 'RC' and payment_date = CURRENT_DATE) AS rc_cnt
+	</select>
+	
+	 <!-- 대시보드 리뷰/문의 관리  건 수  -->
+	<select id="contentCount" resultType="java.util.Map" >
+		SELECT (select count(review_no) from review where review_create_at = CURRENT_DATE) AS review_cnt
+      		  ,(select count(*) from contact where contact_type = '주문문의' and contact_create_at = CURRENT_DATE) AS contactO_cnt
+      		  ,(select count(*) from contact where contact_type = '상품문의' and contact_create_at = CURRENT_DATE) AS contactP_cnt
+      		  ,(select count(*) from contact where contact_type = '기타문의' and contact_create_at = CURRENT_DATE) AS contactM_cnt
+	</select>
+	
+	<!-- 대시보드 통계 -->
+	<!-- 총 매출 및 총 주문 수 -->
+	<select id="salesStatistics" parameterType="java.util.Map" resultType="java.util.Map">
+	    SELECT 
+        SUM(ordered_detail_total_price) AS totalSales,
+        COUNT(DISTINCT ordered_detail.ordered_no) AS totalOrders
+    	FROM ordered_detail
+    	JOIN ordered ON ordered_detail.ordered_no = ordered.ordered_no
+    	WHERE ordered.ordered_date BETWEEN #{startDate} AND #{endDate}
+	</select>
+	
+	<!-- 날짜별 매출 및 주문 수 -->
+	<select id="salesStatisticsByDate" parameterType="java.util.Map" resultType="java.util.Map">
+	    SELECT 
+        DATE(ordered.ordered_date) AS orderDate,   <!-- 테이블 이름 명시 -->
+        SUM(ordered_detail.ordered_detail_total_price) AS dailySales,  <!-- 테이블 이름 명시 -->
+        COUNT(DISTINCT ordered_detail.ordered_no) AS dailyOrders  <!-- 테이블 이름 명시 -->
+    	FROM ordered_detail
+    	JOIN ordered ON ordered_detail.ordered_no = ordered.ordered_no
+    	WHERE ordered.ordered_date BETWEEN #{startDate} AND #{endDate}  <!-- 테이블 이름 명시 -->
+    	GROUP BY DATE(ordered.ordered_date)  <!-- 테이블 이름 명시 -->
+    	ORDER BY orderDate ASC
+	</select>
+
+	<!-- 회원 관리 list -->
+	<select id="userList" parameterType="java.util.Map" resultType="userVO" >
+		SELECT *
+		  FROM user 
+		 WHERE user_type = 'U'
+	</select>
+	
+	<!-- 회원 전체 수 -->
+	<select id="selectTotal" resultType="int">
+		SELECT count(*)
+		  FROM user
+	</select>
+	
+	<!-- 회원 정보 저장 (AJAX 요청 처리) -->
+	<update id="saveUserReply" parameterType="UserVO">
+	    UPDATE user
+	    SET user_note = #{user_note}
+		  , user_status = #{user_status}	    
+	      , user_update_at = NOW()
+	      , user_update_id = #{user_id}
+	    WHERE user_id = #{user_id}
+	</update>
+	
+	<!-- 회원 관리 검색 AJAX  -->
+	<select id="searchMembers" parameterType="java.util.Map" resultType="UserVO">
+	    SELECT *
+	    FROM user
+	    <where>
+	        <if test="searchType != null and searchType != 'all'">
+	            AND ${searchType} LIKE CONCAT('%', #{searchValue}, '%')
+	        </if>
+	        <if test="startDate != null and startDate != ''">
+	            AND user_created_at >= #{startDate}
+	        </if>
+	        <if test="endDate != null and endDate != ''">
+	            AND user_created_at &lt;= #{endDate}
+	        </if>
+	        <if test="userStatus != null and userStatus != 'all'">
+	            AND user_status = #{userStatus}
+	        </if>
+	    </where>
+	    ORDER BY user_created_at DESC
+	</select>
+
+	
+	
+	<!-- 상품 등록 -->
+	<insert id="insertProduct" parameterType="ProductVO">
+		INSERT INTO product(
+			 product_status
+			,category_no
+			,product_publisher
+			,product_price
+			,product_stock
+			,product_name
+			,product_isbn
+			,product_page
+			,product_description
+			,product_author
+			,product_author_description
+			,product_create_id
+		)VALUES(
+			 #{product_status}
+			,(SELECT category_no FROM category WHERE category_name = #{category_name})
+			,#{product_publisher}
+			,#{product_price}
+			,#{product_stock}
+			,#{product_name}
+			,#{product_isbn}
+			,#{product_page}
+			,#{product_description}
+			,#{product_author}
+			,#{product_author_description}
+			,#{user_id}
+		)
+		<selectKey order="AFTER" resultType="String" keyProperty="product_no">
+			SELECT MAX(product_no) AS product_no FROM product
+		</selectKey>
+	</insert>
+	
+	<!-- 첨부파일 -->
+	<insert id="insertAttachment" parameterType="ProductVO">
+	    INSERT INTO attachment (
+	        attachment_type, 
+	        attachment_product_no <!-- 상품 번호 -->
+	    ) 
+	    VALUES (
+	        #{attachment_type}, 
+	        #{product_no}
+	    )
+	    <selectKey order="AFTER" resultType="String" keyProperty="attachment_no">
+			SELECT MAX(attachment_no) AS attachment_no FROM attachment
+		</selectKey>
+	</insert>
+	
+	<!-- 첨부파일 상세 -->
+	 <insert id="insertAttachmentDetail" parameterType="ProductVO">
+        INSERT INTO attachment_detail (
+            attachment_detail_name,
+            attachment_detail_new_name,
+            attachment_detail_path,
+            attachment_detail_size,
+            attachment_detail_create_id,
+            attachment_no
+        )
+        VALUES (
+            #{attachment_detail_name},
+            #{attachment_detail_new_name},
+            #{attachment_detail_path},
+            #{attachment_detail_size},
+            #{attachment_detail_create_id},
+            #{attachment_no}  <!-- attachment 테이블에서 생성된 attachment_no -->
+        )
+    </insert>
+    
+    <!-- 상품 관리 list -->
+    <select id="productList" parameterType="java.util.Map" resultType="ProductVO">
+		  SELECT    p.*
+		          , c.category_name
+		          , ad.attachment_detail_new_name
+		    FROM  product p
+		    JOIN  category c ON p.category_no = c.category_no
+	   LEFT JOIN  attachment a ON p.product_no = a.attachment_product_no AND a.attachment_type = 'PT'
+	   LEFT JOIN  attachment_detail ad ON a.attachment_no = ad.attachment_no
+	   	   WHERE  (product_status = 'E' OR product_status = 'D' OR product_status = 'S')
+       		 AND  product_status != 'N'
+	    ORDER BY  product_created_at DESC
+		   LIMIT  #{start}, #{perPage}
+	</select>
+		
+	<!-- 상품 전체 수 -->
+	<select id="productTotal" resultType="int">
+		SELECT count(*)
+		  FROM product
+		 WHERE (product_status = 'E' OR product_status = 'D' OR product_status = 'S')
+       	   AND product_status != 'N'
+	</select>
+	
+	<!-- 상품 수정 상세 -->
+	<select id="productModify" parameterType="int" resultType="ProductVO" >
+		SELECT p.*
+		      , c.category_name
+      		  , ad.attachment_detail_new_name AS top_attachment_new_name
+      		  , bd.attachment_detail_new_name AS other_attachment_new_name
+		  FROM product p
+		  JOIN category c ON p.category_no = c.category_no
+	 LEFT JOIN attachment a ON p.product_no = a.attachment_product_no AND a.attachment_type = 'PT'
+	 LEFT JOIN attachment_detail ad ON a.attachment_no = ad.attachment_no
+	 LEFT JOIN attachment b ON p.product_no = b.attachment_product_no AND b.attachment_type = 'PD'
+	 LEFT JOIN attachment_detail bd ON b.attachment_no = bd.attachment_no
+	 	 WHERE p.product_no = #{product_no}
+ 	</select>
+	
+	<!-- 상품 수정 -->
+	<update id="productModifyUpdate" parameterType="ProductVO">
+		UPDATE product
+		   SET product_status = #{product_status}
+			  ,category_no = (SELECT category_no FROM category WHERE category_name = #{category_name})
+			  ,product_publisher = #{product_publisher}
+			  ,product_price = #{product_price}
+			  ,product_stock = #{product_stock}
+			  ,product_name = #{product_name}
+			  ,product_isbn = #{product_isbn}
+			  ,product_page = #{product_page}
+			  ,product_description = #{product_description}
+			  ,product_author = #{product_author}
+			  ,product_author_description = #{product_author_description}
+			  ,product_update_id = #{product_update_id}
+			  ,product_update_at = now()
+	    WHERE  product_no = #{product_no}
+	</update>
+	
+	<!-- 수정 전 첨부파일 이름 select -->
+	<select id="productAttachmentName" parameterType="int" resultType="ProductVO">
+		SELECT ad.attachment_detail_new_name, a.attachment_type 
+          FROM attachment_detail ad 
+          JOIN attachment a ON a.attachment_no = ad.attachment_no 
+          WHERE a.attachment_product_no = #{product_no}
+	</select>
+	
+	<!-- 상품 첨부파일 상세 수정 -->
+	<update id="updateProductAttachment" parameterType="ProductVO">
+	     <!-- 대표 이미지 수정 -->
+	    <if test="attachment_type == 'PT'">
+	        UPDATE attachment_detail
+	        SET 
+	            attachment_detail_new_name = #{attachment_detail_new_name},
+	            attachment_detail_name = #{attachment_detail_name},
+	            attachment_detail_update_id = #{attachment_detail_update_id}
+	        WHERE 
+	            attachment_no = (
+	                SELECT attachment_no 
+	                FROM attachment 
+	                WHERE attachment_product_no = #{product_no} 
+	                AND attachment_type = 'PT'
+	            );
+	    </if>
+	    
+	    <!-- 기타 이미지 수정 -->
+	    <if test="attachment_type == 'PD'">
+	        UPDATE attachment_detail
+	        SET 
+	            attachment_detail_new_name = #{attachment_detail_new_name},
+	            attachment_detail_name = #{attachment_detail_name},
+	            attachment_detail_update_id = #{attachment_detail_update_id}
+	        WHERE 
+	            attachment_no = (
+	                SELECT attachment_no 
+	                FROM attachment 
+	                WHERE attachment_product_no = #{product_no} 
+	                AND attachment_type = 'PD'
+	            );
+	    </if>
+	</update>
+	
+	<!-- 첨부파일 삭제 -->
+	<delete id="deleteAttachment" parameterType="int">
+	    DELETE FROM attachment_detail 
+	    WHERE attachment_no = #{attachment_no} 
+	    AND attachment_product_no = #{product_no}  <!-- 상품 번호 추가 -->
+	    AND attachment_type = #{attachment_type}  <!-- 파일 타입 추가 (대표, 기타) -->
+	</delete>
+	
+	<!-- 상품 삭제 -->
+	<update id="productDelete" parameterType="ProductVO">
+		UPDATE product
+	       SET product_status = 'N'
+	     WHERE product_no = #{product_no}
+	</update>
+	
+	<!-- 상품 재고 스케줄러 -->
+	<!-- <update id="updateOutOfStockProducts">
+        UPDATE product 
+        SET product_status = 'S' 
+        WHERE product_stock = 0 AND product_status != 'S'
+    </update> -->
+	
+	 
+	<!-- 주문 관리List -->
+	<select id="orderList" parameterType="java.util.Map" resultType="java.util.Map" >
+			SELECT   od.ordered_detail_no
+			       , od.ordered_detail_quantity
+			       , o.ordered_no
+			       , o.ordered_create_at
+			       , o.ordered_status
+			       , o.ordered_name
+			       , o.ordered_delivery_fee
+			       , p.product_no
+			       , p.product_name
+			       , p.product_price
+			       , pm.payment_type
+			       , pm.payment_price
+			FROM  ordered o
+			JOIN  ordered_detail od ON o.ordered_no = od.ordered_no
+	   LEFT JOIN  product p ON p.product_no = od.product_no
+	   LEFT JOIN  payment pm ON pm.payment_no = o.payment_no
+	   	   WHERE  ordered_status = 'O'
+		      OR  ordered_status = 'D'
+	    ORDER BY  ordered_create_at DESC
+	       LIMIT  #{start}, #{perPage}
+	</select>
+	
+	<!-- 주문 전체 수 -->
+	<select id="orderTotal" resultType="int">
+		SELECT count(*)
+		  FROM ordered
+	</select>
+	
+	<!-- ordered_status 변경 ajax -->
+	<update id="updateOrderStatus" parameterType="OrderedVO">
+		UPDATE ordered
+	       SET ordered_status = #{ordered_status}
+	     WHERE ordered_no = #{ordered_no}
+	</update>
+	
+	<!-- 상품주문번호 모달창 -->
+	<select id="getOrderDetails" parameterType="String" resultType="java.util.Map">
+		SELECT   o.ordered_status
+			       , o.ordered_name
+			       , o.ordered_phone
+			       , o.ordered_address
+			       , o.ordered_note
+			       , o.ordered_create_at
+			       , o.ordered_delivery_fee
+			       , od.ordered_detail_quantity
+			       , od.ordered_detail_no
+			       , p.product_name
+			       , p.product_price
+			       , pm.payment_date
+			       , pm.payment_method
+			       , pm.payment_price
+			FROM  ordered o
+			JOIN  ordered_detail od ON o.ordered_no = od.ordered_no
+	   LEFT JOIN  product p ON p.product_no = od.product_no
+	   LEFT JOIN  payment pm ON pm.payment_no = o.payment_no
+	   	   WHERE ordered_detail_no = #{ordered_detail_no}
+	</select>	
+	
+	<!-- 주문 취소 관리 List-->
+	<select id="orderCancelList" parameterType="java.util.Map" resultType="java.util.Map" >
+			SELECT   o.ordered_no
+			       , o.ordered_cancel_date
+			       , o.ordered_status
+			       , o.ordered_cancel_reason
+			       , o.ordered_name
+			       , o.ordered_phone
+			       , o.ordered_delivery_fee
+			       , p.product_name
+			       , pm.payment_no
+			       , pm.payment_date
+			       , pm.payment_method
+			       , pm.payment_price
+			       , pm.payment_type
+			       , pm.payment_refund_price
+			       , pm.payment_refund_date
+			       , od.ordered_detail_no
+			       , od.ordered_detail_quantity
+			FROM  ordered o
+			JOIN  ordered_detail od ON o.ordered_no = od.ordered_no
+	   LEFT JOIN  product p ON p.product_no = od.product_no
+	   LEFT JOIN  payment pm ON pm.payment_no = o.payment_no
+	   	   WHERE  ordered_status = 'CW'
+		      OR  ordered_status = 'CC'
+	    ORDER BY  ordered_cancel_date DESC
+	       LIMIT  #{start}, #{perPage}
+	</select>
+	
+	<!-- 주문 취소 전체 수 -->
+	<select id="orderCancelTotal" resultType="int">
+		SELECT count(*)
+		  FROM ordered
+		 WHERE ordered_status = 'CW'
+		   OR ordered_status = 'CC'
+	</select>
+	
+	<!-- payment_type 변경 ajax -->
+	<update id="updateRefundStatus" parameterType="PaymentVO">
+		UPDATE payment
+	       SET payment_type = #{payment_type}
+	     WHERE payment_no = #{payment_no}
+	</update> 
+	
+	<!-- 리뷰 관리 list -->
+	<select id="reviewList" parameterType="java.util.Map" resultType="java.util.Map" >
+			SELECT   r.review_no
+				   , r.review_content
+				   , r.review_create_at
+				   , r.review_update_at
+				   , r.review_status
+				   , r.review_create_id
+			       , p.product_no
+			       , p.product_name
+			       , ad.attachment_detail_new_name
+			       , od.ordered_detail_no
+			       , r.review_starrating
+			FROM  review r
+			JOIN  product p ON r.product_no = p.product_no
+	   LEFT JOIN  ordered_detail od ON r.ordered_detail_no = od.ordered_detail_no
+	   LEFT JOIN  attachment a ON r.review_no = a.attachment_review_no
+	   LEFT JOIN  attachment_detail ad ON a.attachment_no = ad.attachment_no
+	    ORDER BY  review_create_at DESC
+	       LIMIT  #{start}, #{perPage}
+	</select>
+	
+	<!-- 리뷰 전체 수 -->
+	<select id="reviewTotal" resultType="int">
+		SELECT count(*)
+		  FROM review
+	</select>
+	
+	<!-- review_status 상태 변경 ajax -->
+	<update id="reviewStatus" parameterType="ReviewVO">
+		UPDATE review
+	       SET review_status = #{review_status}
+	     WHERE review_no = #{review_no}
+	</update> 
+	
+	<!-- 문의 관리 list -->
+<!-- 	<select id="contactList" parameterType="java.util.Map" resultType="java.util.Map" >
+			SELECT   c.*
+       			   , o.ordered_name
+       			   , CASE WHEN u.user_email IS NOT NULL THEN u.user_email 회원 이메일이 있으면 회원 이메일 사용
+           				  ELSE g.guest_email END AS email                  그렇지 않으면 비회원 이메일 사용 
+            	   , ad.attachment_detail_new_name
+			  FROM  contact c
+			  JOIN  ordered o ON c.ordered_no = o.ordered_no
+		 LEFT JOIN  user u ON c.user_id = u.user_id
+		 LEFT JOIN  guest g ON c.guest_no = g.guest_no
+		 LEFT JOIN  attachment a ON c.contact_no = a.attachment_contact_no
+		 LEFT JOIN  attachment_detail ad ON a.attachment_no = ad.attachment_no
+		  ORDER BY  c.contact_create_at DESC
+			 LIMIT  #{start}, #{perPage}
+
+	</select> -->
+	
+	<!-- 문의 관리 list -->
+	<select id="contactList" parameterType="java.util.Map" resultType="java.util.Map" >
+		SELECT
+			c.*,
+		    u.user_id,
+		    u.user_name,
+			CASE WHEN u.user_email IS NOT NULL THEN u.user_email
+			ELSE g.guest_email END AS email,
+		    ad.attachment_detail_new_name
+		FROM contact c
+		LEFT JOIN user u ON u.user_id = c.user_id
+        LEFT JOIN guest g ON c.guest_no = g.guest_no
+		LEFT JOIN product p ON c.product_no = p.product_no
+		LEFT JOIN ordered o ON c.ordered_no = o.ordered_no
+		LEFT JOIN  attachment a ON c.contact_no = a.attachment_contact_no
+		LEFT JOIN  attachment_detail ad ON a.attachment_no = ad.attachment_no
+		WHERE (u.user_id = c.user_id OR u.user_id IS NULL)
+		AND (c.guest_no = g.guest_no OR g.guest_no IS NULL)
+		AND (c.product_no = p.product_no OR c.product_no IS NULL)
+		AND (c.ordered_no = o.ordered_no OR c.ordered_no IS NULL)
+			ORDER BY  c.contact_create_at DESC
+		LIMIT  #{start}, #{perPage}
+
+	</select>
+	
+	<!-- 문의 전체 수 -->
+	<select id="contactTotal" resultType="int">
+		SELECT count(*)
+		  FROM contact
+	</select>
+	
+	<!-- 문의 답변 저장 (AJAX 요청 처리) -->
+	<update id="saveContactReply" parameterType="ContactVO">
+	    UPDATE contact
+	    SET contact_comment = #{contact_comment},
+	        contact_comment_date = NOW()
+	    WHERE contact_no = #{contact_no}
+	</update>
+	
+	<!-- 알림 생성 -->
+    <!-- <insert id="insertContactAlarm" parameterType="CantactAlarmVO">
+        INSERT INTO contact_alarm (contact_no, user_id, contact_alarm_is_read, contact_alarm_date)
+        VALUES (#{contact_no}, #{user_id}, #{contact_alarm_is_read}, #{contact_alarm_date})
+    </insert> -->
+
+    <!-- 관리자 알림 조회 -->
+    <!-- <select id="getUnreadNotifications" parameterType="String" resultType="CantactAlarmVO">
+        SELECT * FROM contact_alarm WHERE user_id = #{user_id} AND contact_alarm_is_read = 'N'
+    </select> -->
+	
+	<!-- 매출관리 매출 합계 -->
+	<!-- 총 거래금액 -->
+	<select id="orderTotalAmount" resultType="OrderedDetailVO">
+		SELECT SUM(ordered_detail_unit_price) AS total_transaction_amount
+    	  FROM ordered_detail
+    	 WHERE YEAR(ordered_detail_create_at) = YEAR(CURRENT_DATE)
+    	   AND MONTH(ordered_detail_create_at) = MONTH(CURRENT_DATE);
+	</select>
+	
+	<!-- 총 결제금액 -->
+	<select id="paymentTotalAmount" resultType="PaymentVO">
+		SELECT SUM(payment_price) AS total_payment_amount
+    	  FROM payment
+    	 WHERE YEAR(payment_date) = YEAR(CURRENT_DATE)
+    	   AND MONTH(payment_date) = MONTH(CURRENT_DATE);
+	</select>
+	
+	<!-- 총 판매수량 -->
+	<select id="orderTotalQuantity" resultType="OrderedDetailVO">
+		SELECT SUM(ordered_detail_quantity) AS total_sales_quantity
+    	  FROM ordered_detail
+    	 WHERE YEAR(ordered_detail_create_at) = YEAR(CURRENT_DATE)
+    	   AND MONTH(ordered_detail_create_at) = MONTH(CURRENT_DATE);
+	</select>
+	
+	<!-- 매출관리 list -->
+	<select id="salesList" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT    p.product_name
+				, p.product_no
+		 		, p.product_price
+    			, SUM(od.ordered_detail_unit_price) AS total_transaction_amount
+    			, SUM(pm.payment_price) AS total_payment_amount
+    			, SUM(od.ordered_detail_total_price) + SUM(pm.payment_price) AS total_amount
+    			, SUM(od.ordered_detail_quantity) AS total_sales_quantity
+    			, ad.attachment_detail_new_name
+		  FROM  product p
+	 LEFT JOIN  ordered_detail od ON p.product_no = od.product_no 
+	 LEFT JOIN  ordered o ON od.ordered_no = o.ordered_no 
+	 LEFT JOIN  payment pm ON o.payment_no = pm.payment_no
+	 LEFT JOIN  attachment a ON p.product_no = a.attachment_product_no AND a.attachment_type = 'PT'
+	 LEFT JOIN  attachment_detail ad ON a.attachment_no = ad.attachment_no
+	  GROUP BY  p.product_no, p.product_name, ad.attachment_detail_new_name
+	  ORDER BY  total_amount DESC
+	     LIMIT  #{start}, #{perPage}
+	</select>
+	 
+	<!-- 매출 관리 전체 수 -->
+	<select id="salesTotal" resultType="int">
+		SELECT COUNT(p.product_no) AS total_count
+		  FROM  product p
+	 LEFT JOIN  ordered_detail od ON p.product_no = od.product_no 
+	 LEFT JOIN  ordered o ON od.ordered_no = o.ordered_no 
+	 LEFT JOIN  payment pm ON o.payment_no = pm.payment_no
+	 LEFT JOIN  attachment a ON p.product_no = a.attachment_product_no AND a.attachment_type = 'PT'
+	 LEFT JOIN  attachment_detail ad ON a.attachment_no = ad.attachment_no
+	</select>
+	
+	
+	
+	
+	
+	
+	
+	
+</mapper>
