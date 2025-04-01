@@ -1,5 +1,5 @@
 # Libro
-- **링크** - [Libro](http://52.79.99.39:8080/Libro) / **ppt** - [AWS_2차](https://github.com/user-attachments/files/19360871/AWS_2.pdf)
+- **링크** - [Libro](http://13.124.213.24:8080/Libro) / **ppt** - [AWS_2차](https://github.com/user-attachments/files/19360871/AWS_2.pdf)
 - 회원 - ID: bookworm / PW: Qq1!  
 
 <br>
